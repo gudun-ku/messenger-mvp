@@ -1,0 +1,107 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: cr.yandex
+  IMAGE_NAME: messenger-backend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        npm ci
+    
+    - name: Run tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test-secret
+      run: |
+        cd backend
+        npm test
+    
+    - name: Run linter
+      run: |
+        cd backend
+        npm run lint
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Login to Yandex Container Registry
+      run: |
+        echo "${{ secrets.YC_SA_KEY }}" | docker login \
+          --username json_key \
+          --password-stdin \
+          cr.yandex
+    
+    - name: Build and push Docker image
+      run: |
+        cd backend
+        docker build -t $REGISTRY/${{ secrets.YC_REGISTRY_ID }}/$IMAGE_NAME:${{ github.sha }} .
+        docker push $REGISTRY/${{ secrets.YC_REGISTRY_ID }}/$IMAGE_NAME:${{ github.sha }}
+    
+    - name: Deploy to Yandex Cloud
+      run: |
+        # Install Yandex Cloud CLI
+        curl https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+        export PATH=$PATH:$HOME/yandex-cloud/bin
+        
+        # Configure CLI
+        yc config set token ${{ secrets.YC_TOKEN }}
+        yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
+        yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+        
+        # Deploy serverless container
+        yc serverless container revision deploy \
+          --container-id ${{ secrets.YC_CONTAINER_ID }} \
+          --image $REGISTRY/${{ secrets.YC_REGISTRY_ID }}/$IMAGE_NAME:${{ github.sha }} \
+          --memory 512M \
+          --cores 0.5 \
+          --execution-timeout 30s \
+          --environment DATABASE_URL=${{ secrets.DATABASE_URL }} \
+          --environment REDIS_URL=${{ secrets.REDIS_URL }} \
+          --environment JWT_SECRET=${{ secrets.JWT_SECRET }}

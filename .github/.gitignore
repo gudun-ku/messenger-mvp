@@ -1,0 +1,21 @@
+# GitHub Actions
+*.log
+logs/
+artifacts/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Local testing
+act/
+.act/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store

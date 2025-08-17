@@ -1,0 +1,90 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+crash.log
+crash.*.log
+
+# Terraform plan files
+*.tfplan
+plan.out
+plan.json
+
+# Sensitive variable files
+secrets.tfvars
+production.tfvars
+staging.tfvars
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# SSH keys
+*.pem
+*.key
+*.pub
+id_rsa
+id_rsa.pub
+
+# Ansible
+*.retry
+ansible/*.retry
+hosts.ini
+inventory.ini
+
+# Packer
+packer_cache/
+*.box
+
+# CloudFormation
+*.template.json
+!template.json
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+*-kubeconfig.yaml
+
+# Helm
+*.tgz
+charts/*.tgz
+requirements.lock
+
+# Certificates
+*.crt
+*.cer
+*.pfx
+*.p12
+
+# Environment specific
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Yandex Cloud specific
+yc-key.json
+service-account-key.json

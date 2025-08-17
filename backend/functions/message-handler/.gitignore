@@ -1,0 +1,25 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+*.zip
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.*.*.*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp

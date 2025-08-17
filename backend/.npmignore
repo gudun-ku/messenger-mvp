@@ -1,0 +1,60 @@
+# Source files
+src/
+*.ts
+!*.d.ts
+
+# Configuration files
+tsconfig.json
+.eslintrc*
+.prettierrc*
+jest.config.js
+nodemon.json
+
+# Development
+.env
+.env.*
+docker-compose*.yml
+Dockerfile
+
+# Tests
+tests/
+test/
+*.test.js
+*.spec.js
+coverage/
+.nyc_output/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Version control
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp

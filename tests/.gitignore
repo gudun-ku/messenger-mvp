@@ -1,0 +1,77 @@
+# Test results
+test-results/
+test-report/
+junit.xml
+xunit.xml
+test-output/
+results/
+
+# Coverage reports
+coverage/
+.coverage
+htmlcov/
+lcov.info
+*.lcov
+.nyc_output/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Performance test results
+performance-results/
+*.jtl
+*.csv
+results.html
+results.json
+
+# Load testing
+k6-results/
+locust-results/
+gatling-results/
+jmeter-results/
+
+# Allure reports
+allure-results/
+allure-report/
+
+# Selenium/WebDriver
+screenshots/
+downloads/
+chromedriver
+geckodriver
+*.webdriver
+
+# Test databases
+test.db
+test.sqlite
+*.test.db
+
+# Test environment
+.env.test
+test.env
+
+# Temporary test files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Node modules (if tests have separate dependencies)
+node_modules/
+
+# Python test cache
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/

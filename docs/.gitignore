@@ -1,0 +1,63 @@
+# Build directories
+_build/
+_site/
+site/
+public/
+dist/
+
+# Documentation generators
+.docusaurus/
+.cache/
+.next/
+node_modules/
+
+# Sphinx
+_build/
+_static/
+_templates/
+*.rst.txt
+
+# MkDocs
+site/
+
+# Jekyll
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# GitBook
+_book/
+book.pdf
+book.epub
+book.mobi
+
+# Swagger/OpenAPI
+swagger-ui/
+redoc-static.html
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+~*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Generated files
+*.pdf
+*.docx
+*.html
+!index.html
+!template.html
+
+# Logs
+*.log
+logs/
