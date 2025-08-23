@@ -2,6 +2,10 @@ import { JWTService } from './jwt.service';
 import jwt from 'jsonwebtoken';
 import { AuthenticationError } from '../../shared/utils/errors';
 
+// Set up test environment variables
+if (!process.env.NODE_ENV) process.env.NODE_ENV = 'test';
+if (!process.env.LOG_LEVEL) process.env.LOG_LEVEL = 'error';
+
 // Mock dependencies
 jest.mock('../../shared/database/connection', () => ({
   query: jest.fn(),

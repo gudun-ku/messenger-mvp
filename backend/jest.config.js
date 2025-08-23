@@ -15,7 +15,10 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testTimeout: 30000,
-  verbose: true
+  verbose: true,
+  // Set up test environment variables directly in config
+  setupFilesAfterEnv: [],
+  globalSetup: undefined,
+  globalTeardown: undefined,
 };
