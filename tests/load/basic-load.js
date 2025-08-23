@@ -13,22 +13,42 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.API_URL || 'http://localhost:3000';
+const BASE_URL = __ENV.API_URL || 'http://localhost:3001';
 
 export default function () {
-  // Test authentication endpoint
-  const authPayload = JSON.stringify({
-    email: `test${Math.random()}@example.com`,
-    password: 'TestPassword123!'
+  // Test health endpoint
+  const healthResponse = http.get(`${BASE_URL}/health`);
+
+  check(healthResponse, {
+    'health status is 200': (r) => r.status === 200,
+    'health response is healthy': (r) => {
+      try {
+        return JSON.parse(r.body).status === 'healthy';
+      } catch (e) {
+        return false;
+      }
+    },
   });
 
-  const authResponse = http.post(`${BASE_URL}/api/auth/login`, authPayload, {
+  // Test invalid auth attempt (should fail gracefully)
+  const authPayload = JSON.stringify({
+    idToken: 'invalid-google-token-for-testing'
+  });
+
+  const authResponse = http.post(`${BASE_URL}/auth/google`, authPayload, {
     headers: { 'Content-Type': 'application/json' },
   });
 
   check(authResponse, {
-    'auth status is 200': (r) => r.status === 200,
-    'auth response has token': (r) => JSON.parse(r.body).accessToken !== undefined,
+    'auth handles invalid token': (r) => r.status >= 400 && r.status < 500,
+    'auth response has error structure': (r) => {
+      try {
+        const body = JSON.parse(r.body);
+        return body.success === false && body.error !== undefined;
+      } catch (e) {
+        return false;
+      }
+    },
   });
 
   sleep(1);

@@ -5,9 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "dev": "nodemon --exec ts-node services/signaling/server.ts",
+    "test:auth": "jest services/auth",
+    "test:watch": "jest --watch",
+    "dev": "nodemon --exec ts-node services/auth/server.ts",
+    "dev:signaling": "nodemon --exec ts-node services/signaling/server.ts",
     "build": "tsc",
-    "start": "node dist/services/signaling/server.js"
+    "start": "node dist/services/auth/server.js",
+    "start:signaling": "node dist/services/signaling/server.js",
+    "migrate": "ts-node -e \"require('./shared/database/connection').runMigrations()\""
   },
   "keywords": [],
   "author": "",
@@ -15,19 +20,33 @@
   "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "express": "^5.1.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.1",
+    "google-auth-library": "^9.15.0",
+    "helmet": "^8.0.0",
     "ioredis": "^5.7.0",
     "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.3",
     "pg": "^8.16.3",
     "redis": "^5.8.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "winston": "^3.15.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.3.0",
-    "jest": "^30.0.5",
+    "@types/bcrypt": "^5.0.2",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.12",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20.12.7",
+    "@types/supertest": "^6.0.2",
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.11.10",
+    "jest": "^29.7.0",
     "nodemon": "^3.1.10",
-    "typescript": "^5.9.2"
+    "supertest": "^6.3.4",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
   }
 }

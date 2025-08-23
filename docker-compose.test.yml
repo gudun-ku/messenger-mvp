@@ -25,14 +25,24 @@ services:
       timeout: 5s
       retries: 5
 
-  signaling-test:
-    build: ./backend
+  auth-service-test:
+    build: 
+      context: ./backend
+      target: development
     ports:
-      - "3001:3000"
+      - "3001:3001"
     environment:
       NODE_ENV: test
       DATABASE_URL: postgresql://test_user:test_password@postgres-test:5432/messenger_test
       REDIS_URL: redis://redis-test:6379
+      JWT_ACCESS_SECRET: test_access_secret_key_for_testing_min_32_chars
+      JWT_REFRESH_SECRET: test_refresh_secret_key_for_testing_min_32_chars
+      JWT_ACCESS_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 7d
+      GOOGLE_CLIENT_ID: test_google_client_id
+      GOOGLE_CLIENT_SECRET: test_google_client_secret
+      LOG_LEVEL: error
+    command: npm run dev
     depends_on:
       postgres-test:
         condition: service_healthy
