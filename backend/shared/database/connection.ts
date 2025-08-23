@@ -51,6 +51,21 @@ export const runMigrations = async (): Promise<void> => {
     console.log('No migrations directory found');
     return;
   }
+
+  // Create migrations table if it doesn't exist
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        id SERIAL PRIMARY KEY,
+        version VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (error) {
+    console.error('Failed to create migrations table:', error);
+    throw error;
+  }
   
   const migrationFiles = fs.readdirSync(migrationsDir)
     .filter((file: string) => file.endsWith('.sql'))
@@ -79,6 +94,13 @@ export const runMigrations = async (): Promise<void> => {
     
     try {
       await query(migrationSQL);
+      
+      // Record migration as executed
+      await query(
+        'INSERT INTO migrations (version, name) VALUES ($1, $2)',
+        [version, version.replace(/^\d+_/, '')]
+      );
+      
       console.log(`Migration ${version} completed successfully`);
     } catch (error) {
       console.error(`Migration ${version} failed:`, error);

@@ -105,7 +105,7 @@ const startServer = async () => {
 
     // Start server
     const port = config.AUTH_PORT;
-    const server = app.listen(port, () => {
+    const server = app.listen(port, '0.0.0.0', () => {
       authLogger.info(`Auth service started on port ${port}`, {
         port,
         environment: config.NODE_ENV,

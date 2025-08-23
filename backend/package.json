@@ -4,15 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
-    "test:auth": "jest services/auth",
-    "test:watch": "jest --watch",
+    "test": "NODE_NO_WARNINGS=1 NODE_ENV=test jest",
+    "test:auth": "NODE_NO_WARNINGS=1 NODE_ENV=test jest services/auth",
+    "test:watch": "NODE_NO_WARNINGS=1 NODE_ENV=test jest --watch",
     "dev": "nodemon --exec ts-node services/auth/server.ts",
     "dev:signaling": "nodemon --exec ts-node services/signaling/server.ts",
     "build": "tsc",
     "start": "node dist/services/auth/server.js",
     "start:signaling": "node dist/services/signaling/server.js",
-    "migrate": "ts-node -e \"require('./shared/database/connection').runMigrations()\""
+    "migrate": "ts-node -e \"require('./shared/database/connection').runMigrations()\"",
+    "lint": "tsc --noEmit",
+    "lint:fix": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

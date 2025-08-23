@@ -43,6 +43,7 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
+        cache-dependency-path: 'backend/package-lock.json'
     
     - name: Install dependencies
       run: |
@@ -51,9 +52,14 @@ jobs:
     
     - name: Run tests
       env:
+        NODE_ENV: test
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
         REDIS_URL: redis://localhost:6379
-        JWT_SECRET: test-secret
+        JWT_ACCESS_SECRET: test_access_secret_key_for_github_actions_32_chars
+        JWT_REFRESH_SECRET: test_refresh_secret_key_for_github_actions_32_chars
+        GOOGLE_CLIENT_ID: test_google_client_id_for_github_actions
+        GOOGLE_CLIENT_SECRET: test_google_client_secret_for_github_actions
+        LOG_LEVEL: error
       run: |
         cd backend
         npm test
@@ -62,6 +68,11 @@ jobs:
       run: |
         cd backend
         npm run lint
+    
+    - name: Build application
+      run: |
+        cd backend
+        npm run build
 
   deploy:
     needs: test
@@ -102,6 +113,11 @@ jobs:
           --memory 512M \
           --cores 0.5 \
           --execution-timeout 30s \
+          --environment NODE_ENV=production \
           --environment DATABASE_URL=${{ secrets.DATABASE_URL }} \
           --environment REDIS_URL=${{ secrets.REDIS_URL }} \
-          --environment JWT_SECRET=${{ secrets.JWT_SECRET }}
+          --environment JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }} \
+          --environment JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }} \
+          --environment GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
+          --environment GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
+          --environment LOG_LEVEL=info

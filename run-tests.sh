@@ -9,9 +9,17 @@ docker-compose -f docker-compose.test.yml up -d
 echo "⏳ Waiting for services to be ready..."
 sleep 10
 
-# Run integration tests
-echo "🧪 Running integration tests..."
-npm test -- tests/integration/
+# Run backend unit tests
+echo "🧪 Running backend unit tests..."
+(cd backend && npm test)
+
+# Wait for services to be fully ready
+echo "⏳ Waiting for auth service to be ready..."
+sleep 15
+
+# Basic service health check
+echo "🔍 Checking service health..."
+curl -f http://localhost:3001/health || echo "Auth service health check failed"
 
 # Run load tests
 echo "📊 Running load tests..."

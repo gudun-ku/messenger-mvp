@@ -18,25 +18,27 @@ export const errorHandler = (
     isOperational = error.isOperational;
   }
 
-  // Log error details
-  const errorLog = {
-    message: error.message,
-    stack: error.stack,
-    statusCode,
-    isOperational,
-    method: req.method,
-    url: req.originalUrl,
-    ip: req.ip,
-    userAgent: req.headers['user-agent'],
-    body: req.body,
-    params: req.params,
-    query: req.query
-  };
+  // Log error details (skip logging during tests)
+  if (process.env.NODE_ENV !== 'test') {
+    const errorLog = {
+      message: error.message,
+      stack: error.stack,
+      statusCode,
+      isOperational,
+      method: req.method,
+      url: req.originalUrl,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      body: req.body,
+      params: req.params,
+      query: req.query
+    };
 
-  if (statusCode >= 500) {
-    logger.error('Server error', errorLog);
-  } else {
-    logger.warn('Client error', errorLog);
+    if (statusCode >= 500) {
+      logger.error('Server error', errorLog);
+    } else {
+      logger.warn('Client error', errorLog);
+    }
   }
 
   // Send error response

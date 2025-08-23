@@ -99,16 +99,6 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 CREATE TRIGGER update_auth_rate_limits_updated_at BEFORE UPDATE ON auth_rate_limits
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Insert migration record
-CREATE TABLE IF NOT EXISTS migrations (
-    id SERIAL PRIMARY KEY,
-    version VARCHAR(50) UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO migrations (version, name) 
-VALUES ('001', 'create_auth_tables') 
-ON CONFLICT (version) DO NOTHING;
+-- Migration record will be inserted automatically by migration runner
 
 COMMIT;

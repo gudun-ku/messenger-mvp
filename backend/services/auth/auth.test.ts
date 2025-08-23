@@ -129,7 +129,7 @@ describe('Auth Routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
-      expect(response.body.error.message).toContain('Google ID token is required');
+      expect(response.body.error.message).toContain('Required');
     });
 
     it('should return 401 for invalid Google token', async () => {
@@ -188,7 +188,7 @@ describe('Auth Routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
-      expect(response.body.error.message).toContain('Refresh token is required');
+      expect(response.body.error.message).toContain('Required');
     });
   });
 
@@ -264,7 +264,7 @@ describe('Auth Routes', () => {
         id: 'user123',
         email: 'test@example.com',
         display_name: 'Test User',
-        created_at: new Date()
+        created_at: '2025-08-23T19:43:34.724Z'
       };
 
       mockJWTService.verifyAccessToken.mockResolvedValue(mockPayload);

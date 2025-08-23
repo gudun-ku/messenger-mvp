@@ -167,7 +167,7 @@ describe('JWTService', () => {
       await jwtService.revokeRefreshToken(refreshToken);
 
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE refresh_tokens SET is_revoked = true'),
+        expect.stringMatching(/UPDATE refresh_tokens\s+SET is_revoked = true\s+WHERE token_hash = \$1/),
         [expect.stringContaining('hashed_')]
       );
     });
@@ -182,7 +182,7 @@ describe('JWTService', () => {
       await jwtService.revokeAllUserTokens(userId);
 
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE refresh_tokens SET is_revoked = true WHERE user_id = $1'),
+        expect.stringMatching(/UPDATE refresh_tokens\s+SET is_revoked = true\s+WHERE user_id = \$1 AND is_revoked = false/),
         [userId]
       );
     });
@@ -197,7 +197,7 @@ describe('JWTService', () => {
 
       expect(result).toBe(deletedCount);
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM refresh_tokens WHERE expires_at < NOW() OR is_revoked = true')
+        expect.stringMatching(/DELETE FROM refresh_tokens\s+WHERE expires_at < NOW\(\) OR is_revoked = true/)
       );
     });
   });
