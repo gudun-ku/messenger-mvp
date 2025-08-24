@@ -18,7 +18,7 @@ module.exports = {
   testTimeout: 30000,
   verbose: true,
   // Set up test environment variables directly in config
-  setupFilesAfterEnv: [],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   globalSetup: undefined,
   globalTeardown: undefined,
 };

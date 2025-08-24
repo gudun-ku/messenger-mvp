@@ -1,3 +1,12 @@
+// Set up test environment variables BEFORE any imports
+if (!process.env.NODE_ENV) process.env.NODE_ENV = 'test';
+if (!process.env.LOG_LEVEL) process.env.LOG_LEVEL = 'error';
+if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/messenger_test';
+if (!process.env.JWT_ACCESS_SECRET) process.env.JWT_ACCESS_SECRET = 'test-access-secret-key-for-testing';
+if (!process.env.JWT_REFRESH_SECRET) process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-for-testing';
+if (!process.env.GOOGLE_CLIENT_ID) process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
+if (!process.env.GOOGLE_CLIENT_SECRET) process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
+
 import request from 'supertest';
 import express from 'express';
 import { JWTService } from './jwt.service';
@@ -5,12 +14,6 @@ import { OAuthService } from './oauth.service';
 import authRoutes from './auth.routes';
 import { errorHandler } from '../../shared/middleware/errorHandler';
 import { requestLogger } from '../../shared/middleware/logging';
-
-// Set up test environment variables
-if (!process.env.NODE_ENV) process.env.NODE_ENV = 'test';
-if (!process.env.LOG_LEVEL) process.env.LOG_LEVEL = 'error';
-if (!process.env.GOOGLE_CLIENT_ID) process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
-if (!process.env.GOOGLE_CLIENT_SECRET) process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
 
 // Mock dependencies
 jest.mock('./jwt.service');
