@@ -13,7 +13,8 @@ const app = express();
 const authLogger = createLogger('auth-service');
 
 // Trust proxy for Yandex Cloud (enables proper client IP detection)
-app.set('trust proxy', true);
+// Use specific trust proxy setting for Yandex Cloud infrastructure
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet({
