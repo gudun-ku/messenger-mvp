@@ -12,6 +12,9 @@ import logger, { createLogger } from '../../shared/utils/logger';
 const app = express();
 const authLogger = createLogger('auth-service');
 
+// Trust proxy for Yandex Cloud (enables proper client IP detection)
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {

@@ -57,8 +57,8 @@ COPY --from=base /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package*.json ./
 
-# Copy migrations directory
-COPY --from=build /app/shared/database/migrations ./shared/database/migrations
+# Copy migrations directory to match compiled path structure
+COPY --from=build /app/shared/database/migrations ./dist/shared/database/migrations
 
 # Create logs directory and set permissions
 RUN mkdir -p logs && chown nodejs:nodejs logs
