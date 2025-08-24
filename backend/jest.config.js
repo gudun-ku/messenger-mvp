@@ -4,7 +4,9 @@ module.exports = {
   roots: ['<rootDir>/services', '<rootDir>/shared'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', {
+      isolatedModules: true
+    }],
   },
   collectCoverageFrom: [
     'services/**/*.ts',
@@ -16,9 +18,5 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   testTimeout: 30000,
-  verbose: true,
-  // Set up test environment variables directly in config
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  globalSetup: undefined,
-  globalTeardown: undefined,
+  verbose: true
 };
