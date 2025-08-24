@@ -1,8 +1,23 @@
 import { Pool, PoolClient } from 'pg';
 import { createHash } from 'crypto';
 
+// Ensure SSL is properly configured for production
+const getConnectionString = () => {
+  const baseUrl = process.env.DATABASE_URL;
+  if (!baseUrl) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+  
+  // Add SSL mode for production if not already present
+  if (process.env.NODE_ENV === 'production' && !baseUrl.includes('sslmode=')) {
+    return `${baseUrl}?sslmode=require`;
+  }
+  
+  return baseUrl;
+};
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: getConnectionString(),
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
