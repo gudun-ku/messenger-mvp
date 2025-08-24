@@ -67,7 +67,6 @@ jobs:
         revision-execution-timeout: 30s
         revision-cores: 1
         revision-core-fraction: 100
-        revision-connectivity: network-id=enpb8niardt7i9l088h8,subnet-id=e9b8a8t2418a0qh1999g
         revision-env: |
           NODE_ENV=production
           AUTH_PORT=8080
