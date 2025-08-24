@@ -2,77 +2,38 @@ name: Test and Deploy
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev1]
   pull_request:
     branches: [main]
-
-env:
-  REGISTRY: cr.yandex
-  IMAGE_NAME: messenger-backend
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:14
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      redis:
-        image: redis:7
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-
+    defaults:
+      run:
+        working-directory: ./backend
+        
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: 'backend/package-lock.json'
-    
+        
     - name: Install dependencies
-      run: |
-        cd backend
-        npm ci
-    
+      run: npm ci
+      
     - name: Run tests
+      run: npm test
       env:
         NODE_ENV: test
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
-        REDIS_URL: redis://localhost:6379
-        JWT_ACCESS_SECRET: test_access_secret_key_for_github_actions_32_chars
-        JWT_REFRESH_SECRET: test_refresh_secret_key_for_github_actions_32_chars
-        GOOGLE_CLIENT_ID: test_google_client_id_for_github_actions
-        GOOGLE_CLIENT_SECRET: test_google_client_secret_for_github_actions
-        LOG_LEVEL: error
-      run: |
-        cd backend
-        npm test
-    
-    - name: Run linter
-      run: |
-        cd backend
-        npm run lint
-    
-    - name: Build application
-      run: |
-        cd backend
-        npm run build
+        JWT_ACCESS_SECRET: test-secret-key-for-github-actions-minimum-32-chars
+        JWT_REFRESH_SECRET: test-refresh-secret-key-for-github-actions-minimum-32-chars
+        GOOGLE_CLIENT_ID: test-google-client-id
+        GOOGLE_CLIENT_SECRET: test-google-client-secret
 
   deploy:
     needs: test
@@ -80,44 +41,39 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
-    - name: Login to Yandex Container Registry
-      run: |
-        echo "${{ secrets.YC_SA_KEY }}" | docker login \
-          --username json_key \
-          --password-stdin \
-          cr.yandex
-    
+    - name: Login to Yandex Cloud Container Registry
+      uses: yc-actions/yc-cr-login@v1
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+
     - name: Build and push Docker image
+      working-directory: ./backend
       run: |
-        cd backend
-        docker build -t $REGISTRY/${{ secrets.YC_REGISTRY_ID }}/$IMAGE_NAME:${{ github.sha }} .
-        docker push $REGISTRY/${{ secrets.YC_REGISTRY_ID }}/$IMAGE_NAME:${{ github.sha }}
-    
-    - name: Deploy to Yandex Cloud
-      run: |
-        # Install Yandex Cloud CLI
-        curl https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-        export PATH=$PATH:$HOME/yandex-cloud/bin
-        
-        # Configure CLI
-        yc config set token ${{ secrets.YC_TOKEN }}
-        yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
-        yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
-        
-        # Deploy serverless container
-        yc serverless container revision deploy \
-          --container-id ${{ secrets.YC_CONTAINER_ID }} \
-          --image $REGISTRY/${{ secrets.YC_REGISTRY_ID }}/$IMAGE_NAME:${{ github.sha }} \
-          --memory 512M \
-          --cores 0.5 \
-          --execution-timeout 30s \
-          --environment NODE_ENV=production \
-          --environment DATABASE_URL=${{ secrets.DATABASE_URL }} \
-          --environment REDIS_URL=${{ secrets.REDIS_URL }} \
-          --environment JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }} \
-          --environment JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }} \
-          --environment GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-          --environment GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
-          --environment LOG_LEVEL=info
+        docker build --target production -t cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }} -t cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:latest .
+        docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }}
+        docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:latest
+
+    - name: Deploy to Yandex Cloud Serverless Container
+      uses: yc-actions/yc-sls-container-deploy@v1
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+        container-name: messenger-auth
+        folder-id: ${{ secrets.YC_FOLDER_ID }}
+        revision-image-url: cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }}
+        revision-service-account-id: ${{ secrets.YC_SERVICE_ACCOUNT_ID }}
+        revision-memory: 512MB
+        revision-execution-timeout: 30s
+        revision-cores: 1
+        revision-core-fraction: 100
+        revision-env: |
+          NODE_ENV=production
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          REDIS_URL=${{ secrets.REDIS_URL }}
+          JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          AUTH_PORT=3001
+          LOG_LEVEL=info
