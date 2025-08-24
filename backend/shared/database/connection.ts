@@ -8,12 +8,23 @@ const getConnectionString = () => {
     throw new Error('DATABASE_URL environment variable is not set');
   }
   
-  // Add SSL mode for production if not already present
-  if (process.env.NODE_ENV === 'production' && !baseUrl.includes('sslmode=')) {
-    return `${baseUrl}?sslmode=require`;
+  // URL-encode any special characters in the connection string
+  let connectionString = baseUrl;
+  
+  // Fix password encoding if it contains special characters
+  const match = connectionString.match(/postgresql:\/\/([^:]+):([^@]+)@(.+)/);
+  if (match) {
+    const [, username, password, hostAndDb] = match;
+    const encodedPassword = encodeURIComponent(password);
+    connectionString = `postgresql://${username}:${encodedPassword}@${hostAndDb}`;
   }
   
-  return baseUrl;
+  // Add SSL mode for production if not already present
+  if (process.env.NODE_ENV === 'production' && !connectionString.includes('sslmode=')) {
+    return `${connectionString}?sslmode=require`;
+  }
+  
+  return connectionString;
 };
 
 const pool = new Pool({
