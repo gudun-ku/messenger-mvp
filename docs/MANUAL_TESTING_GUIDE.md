@@ -198,11 +198,11 @@ curl "https://YOUR_CONTAINER_URL/health" | jq '.database'
 ### 6.2 Verify Database Tables
 Connect to your PostgreSQL cluster and verify tables exist:
 ```bash
-# Get connection details
-yc managed-postgresql cluster get messenger-db --format yaml
+# Get connection details (now using ru-central1-b cluster)
+yc managed-postgresql cluster get messenger-db-b --format yaml
 
 # Connect and check tables (replace with your connection details)
-psql "postgresql://messenger_user:PASSWORD@HOST:6432/messenger_prod?sslmode=require" \
+psql "postgresql://messenger_user:PASSWORD@rc1b-oiip89mb12qde9ig.mdb.yandexcloud.net:6432/messenger_prod?sslmode=require" \
   -c "\dt"
 ```
 
@@ -348,11 +348,11 @@ If you get `{"errorMessage":"exit status 1","errorType":"UserCodeError"}`:
 
 1. **Check connection strings in GitHub secrets**:
    ```bash
-   # Get correct PostgreSQL connection
-   yc managed-postgresql hosts list --cluster-name messenger-db
+   # Get correct PostgreSQL connection (now using ru-central1-b cluster)
+   yc managed-postgresql hosts list --cluster-name messenger-db-b
    
-   # Get correct Redis connection  
-   yc managed-redis hosts list --cluster-name messenger-redis
+   # Get correct Redis connection (now using ru-central1-b cluster)
+   yc managed-redis hosts list --cluster-name messenger-redis-b
    ```
 
 2. **Update GitHub secrets** with complete connection strings:
