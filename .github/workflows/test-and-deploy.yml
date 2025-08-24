@@ -55,13 +55,36 @@ jobs:
         docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }}
         docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:latest
 
-    - name: Setup Yandex Cloud CLI
-      uses: yc-actions/yc-cli-install@v1
+    - name: Deploy to Yandex Cloud Serverless Container
+      uses: yc-actions/yc-sls-container-deploy@v1
       with:
         yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+        container-name: messenger-auth
+        folder-id: ${{ secrets.YC_FOLDER_ID }}
+        revision-image-url: cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }}
+        revision-service-account-id: ${{ secrets.YC_SERVICE_ACCOUNT_ID }}
+        revision-memory: 512MB
+        revision-execution-timeout: 30s
+        revision-cores: 1
+        revision-core-fraction: 100
+        revision-env: |
+          NODE_ENV=production
+          AUTH_PORT=8080
+          LOG_LEVEL=info
+          JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          REDIS_URL=${{ secrets.REDIS_URL }}
 
-    - name: Deploy to Yandex Cloud Serverless Container
+    - name: Configure Container Network Access
       run: |
+        # Get the latest revision ID
+        REVISION_ID=$(yc serverless container revision list --container-name messenger-auth --limit 1 --format json | grep '"id"' | head -1 | cut -d'"' -f4)
+        echo "Latest revision ID: $REVISION_ID"
+        
+        # Update the container revision with network connectivity
         yc serverless container revision deploy \
           --container-name messenger-auth \
           --image cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }} \
@@ -70,8 +93,7 @@ jobs:
           --cores 1 \
           --core-fraction 100 \
           --service-account-id ${{ secrets.YC_SERVICE_ACCOUNT_ID }} \
-          --network-id enpb8niardt7i9l088h8 \
-          --subnet-id e9b8a8t2418a0qh1999g \
+          --connectivity network-id=enpb8niardt7i9l088h8,subnet-id=e9b8a8t2418a0qh1999g \
           --environment NODE_ENV=production \
           --environment AUTH_PORT=8080 \
           --environment LOG_LEVEL=info \
