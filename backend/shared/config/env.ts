@@ -5,10 +5,10 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
   // Database
-  DATABASE_URL: z.string().url('Invalid database URL'),
+  DATABASE_URL: z.string().min(1, 'Database URL is required'),
   
-  // Redis
-  REDIS_URL: z.string().url('Invalid Redis URL'),
+  // Redis  
+  REDIS_URL: z.string().min(1, 'Redis URL is required'),
   
   // JWT
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT access secret must be at least 32 characters'),
