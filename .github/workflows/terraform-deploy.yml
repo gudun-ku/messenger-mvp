@@ -1,0 +1,301 @@
+name: Terraform Deploy
+
+on:
+  push:
+    branches: [main, dev1]
+    paths:
+      - 'backend/**'
+      - 'infrastructure/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'infrastructure/**'
+
+env:
+  YC_SERVICE_ACCOUNT_KEY_FILE: /tmp/sa-key.json
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'backend/package-lock.json'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test
+      env:
+        NODE_ENV: test
+        JWT_ACCESS_SECRET: test-secret-key-for-github-actions-minimum-32-chars
+        JWT_REFRESH_SECRET: test-refresh-secret-key-for-github-actions-minimum-32-chars
+        GOOGLE_CLIENT_ID: test-google-client-id
+        GOOGLE_CLIENT_SECRET: test-google-client-secret
+
+  # Terraform plan for pull requests
+  terraform-plan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        environment: [dev, staging]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ~1.6
+        terraform_wrapper: false
+    
+    - name: Setup Yandex Cloud CLI
+      uses: yc-actions/yc-cli-install@v1
+    
+    - name: Authenticate to Yandex Cloud
+      run: |
+        echo '${{ secrets.YC_SA_JSON_CREDENTIALS }}' > ${YC_SERVICE_ACCOUNT_KEY_FILE}
+        yc config profile create sa-profile
+        yc config set service-account-key ${YC_SERVICE_ACCOUNT_KEY_FILE}
+        yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
+        yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+        
+        # Set up Terraform auth
+        export YC_TOKEN=$(yc iam create-token)
+        echo "YC_TOKEN=${YC_TOKEN}" >> $GITHUB_ENV
+    
+    - name: Terraform Init
+      working-directory: ./infrastructure/environments/${{ matrix.environment }}
+      run: terraform init
+    
+    - name: Terraform Plan
+      working-directory: ./infrastructure/environments/${{ matrix.environment }}
+      run: |
+        terraform plan \
+          -var-file=terraform.tfvars \
+          -detailed-exitcode \
+          -out=tfplan
+      env:
+        TF_VAR_app_secrets: ${{ secrets.APP_SECRETS }}
+        YC_TOKEN: ${{ env.YC_TOKEN }}
+    
+    - name: Save plan
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-plan-${{ matrix.environment }}
+        path: ./infrastructure/environments/${{ matrix.environment }}/tfplan
+
+  # Build and push container image for main branch
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Yandex Cloud CLI
+      uses: yc-actions/yc-cli-install@v1
+    
+    - name: Authenticate to Yandex Cloud
+      run: |
+        echo '${{ secrets.YC_SA_JSON_CREDENTIALS }}' > ${YC_SERVICE_ACCOUNT_KEY_FILE}
+        yc config profile create sa-profile
+        yc config set service-account-key ${YC_SERVICE_ACCOUNT_KEY_FILE}
+        yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
+        yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+    
+    - name: Login to Container Registry
+      uses: yc-actions/yc-cr-login@v2
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+    
+    - name: Extract metadata
+      id: meta
+      run: |
+        echo "tags=cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }},cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:latest" >> $GITHUB_OUTPUT
+    
+    - name: Build and push Docker image
+      id: build
+      working-directory: ./backend
+      run: |
+        docker build --target production \
+          -t cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }} \
+          -t cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:latest .
+        
+        docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }}
+        docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:latest
+        
+        # Output digest for verification
+        echo "digest=$(docker inspect cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }} --format='{{index .RepoDigests 0}}')" >> $GITHUB_OUTPUT
+
+  # Deploy to staging via Terraform
+  deploy-staging:
+    needs: [test, build-and-push]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ~1.6
+        terraform_wrapper: false
+    
+    - name: Setup Yandex Cloud CLI
+      uses: yc-actions/yc-cli-install@v1
+    
+    - name: Authenticate to Yandex Cloud
+      run: |
+        echo '${{ secrets.YC_SA_JSON_CREDENTIALS }}' > ${YC_SERVICE_ACCOUNT_KEY_FILE}
+        yc config profile create sa-profile
+        yc config set service-account-key ${YC_SERVICE_ACCOUNT_KEY_FILE}
+        yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
+        yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+        
+        # Set up Terraform auth
+        export YC_TOKEN=$(yc iam create-token)
+        echo "YC_TOKEN=${YC_TOKEN}" >> $GITHUB_ENV
+    
+    - name: Terraform Init
+      working-directory: ./infrastructure/environments/staging
+      run: terraform init
+    
+    - name: Terraform Plan
+      working-directory: ./infrastructure/environments/staging
+      run: |
+        terraform plan \
+          -var-file=terraform.tfvars \
+          -var="container_image_tag=${{ github.sha }}" \
+          -out=tfplan
+      env:
+        TF_VAR_app_secrets: ${{ secrets.APP_SECRETS_STAGING }}
+        YC_TOKEN: ${{ env.YC_TOKEN }}
+    
+    - name: Terraform Apply
+      working-directory: ./infrastructure/environments/staging
+      run: terraform apply -auto-approve tfplan
+      env:
+        YC_TOKEN: ${{ env.YC_TOKEN }}
+    
+    - name: Get staging outputs
+      id: terraform-outputs
+      working-directory: ./infrastructure/environments/staging
+      run: |
+        echo "container_url=$(terraform output -raw container_url)" >> $GITHUB_OUTPUT
+        echo "database_host=$(terraform output -json database_connection | jq -r '.host')" >> $GITHUB_OUTPUT
+      env:
+        YC_TOKEN: ${{ env.YC_TOKEN }}
+    
+    - name: Verify deployment
+      run: |
+        echo "🚀 Staging deployment completed!"
+        echo "Container URL: ${{ steps.terraform-outputs.outputs.container_url }}"
+        echo "Database Host: ${{ steps.terraform-outputs.outputs.database_host }}"
+        
+        # Health check (optional)
+        if curl -f "${{ steps.terraform-outputs.outputs.container_url }}/health" --max-time 30; then
+          echo "✅ Health check passed"
+        else
+          echo "⚠️ Health check failed, but deployment completed"
+        fi
+
+  # Deploy to production (manual approval required)
+  deploy-production:
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production  # This requires manual approval in GitHub
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ~1.6
+        terraform_wrapper: false
+    
+    - name: Setup Yandex Cloud CLI
+      uses: yc-actions/yc-cli-install@v1
+    
+    - name: Authenticate to Yandex Cloud
+      run: |
+        echo '${{ secrets.YC_SA_JSON_CREDENTIALS }}' > ${YC_SERVICE_ACCOUNT_KEY_FILE}
+        yc config profile create sa-profile
+        yc config set service-account-key ${YC_SERVICE_ACCOUNT_KEY_FILE}
+        yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
+        yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+        
+        # Set up Terraform auth
+        export YC_TOKEN=$(yc iam create-token)
+        echo "YC_TOKEN=${YC_TOKEN}" >> $GITHUB_ENV
+    
+    - name: Terraform Init
+      working-directory: ./infrastructure/environments/prod
+      run: terraform init
+    
+    - name: Terraform Plan
+      working-directory: ./infrastructure/environments/prod
+      run: |
+        terraform plan \
+          -var-file=terraform.tfvars \
+          -var="container_image_tag=${{ github.sha }}" \
+          -out=tfplan
+      env:
+        TF_VAR_app_secrets: ${{ secrets.APP_SECRETS_PRODUCTION }}
+        YC_TOKEN: ${{ env.YC_TOKEN }}
+    
+    - name: Terraform Apply
+      working-directory: ./infrastructure/environments/prod
+      run: terraform apply -auto-approve tfplan
+      env:
+        YC_TOKEN: ${{ env.YC_TOKEN }}
+    
+    - name: Get production outputs
+      id: terraform-outputs
+      working-directory: ./infrastructure/environments/prod
+      run: |
+        echo "container_url=$(terraform output -raw container_url)" >> $GITHUB_OUTPUT
+        echo "database_host=$(terraform output -json database_connection | jq -r '.host')" >> $GITHUB_OUTPUT
+      env:
+        YC_TOKEN: ${{ env.YC_TOKEN }}
+    
+    - name: Verify production deployment
+      run: |
+        echo "🎉 Production deployment completed!"
+        echo "Container URL: ${{ steps.terraform-outputs.outputs.container_url }}"
+        echo "Database Host: ${{ steps.terraform-outputs.outputs.database_host }}"
+        
+        # Health check
+        if curl -f "${{ steps.terraform-outputs.outputs.container_url }}/health" --max-time 30; then
+          echo "✅ Production health check passed"
+        else
+          echo "❌ Production health check failed"
+          exit 1
+        fi
+    
+    - name: Notify deployment success
+      run: |
+        echo "🎊 Production deployment successful!"
+        echo "Version: ${{ github.sha }}"
+        echo "Image: cr.yandex/${{ secrets.YC_REGISTRY_ID }}/messenger-auth:${{ github.sha }}"
